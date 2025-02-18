@@ -17,7 +17,7 @@ table = os.getenv("table")
 schema = os.getenv("schema")
 
 DATABASE_URL = f"postgresql://{user}:{password}@{host}:{port}/{db}"
-CSV_FILE_PATH = ""  # Убрал пробел
+CSV_FILE_PATH = r"C:\Users\danila.lipatov\PycharmProjects\1.csv"  # Убрал пробел
 
 # Имя таблицы в PostgreSQL
 TABLE_NAME = table
@@ -32,7 +32,7 @@ async def load_csv_to_postgres():
 
     print("📂 Загружаем CSV в Dask DataFrame...")
     ddf = dd.read_csv(CSV_FILE_PATH, dtype=DTYPE_MAP)
-    ddf.repartition(npartitions=200)
+    ddf = ddf.repartition(npartitions=200)
 
     missing_cols = {col: dtype for col, dtype in DTYPE_MAP.items() if col not in ddf.columns}
     print(missing_cols)
@@ -56,19 +56,32 @@ async def load_csv_to_postgres():
     for batch_df in ddf.to_delayed():
         counter += 1
         print(f"🚀 Загружаем batch #{counter}...")
+        #
+        # # Вычисляем данные в фоне
+        # batch = await asyncio.to_thread(lambda: batch_df.compute())
+        #
+        # print("stop_2")
+        # # Заменяем NaN/NaT на None
+        # batch = batch.where(pd.notna(batch), 'null')
+        #
+        # # Приводим данные к списку кортежей
+        # records = [tuple(row) for row in batch.itertuples(index=False, name=None)]
+        #
+        # # Вставляем данные в PostgreSQL
+        # await conn.executemany(insert_query, records)
+        if counter == 46:  # Пропускаем первые 45 батчей
+            print(f"📌 Проверяем batch #{counter}")
 
-        # Вычисляем данные в фоне
-        batch = await asyncio.to_thread(lambda: batch_df.compute())
+            # Вычисляем данные
+            batch = batch_df.compute()
 
-        print("stop_2")
-        # Заменяем NaN/NaT на None
-        batch = batch.where(pd.notna(batch), 'null')
+            # Выводим 5 первых строк для анализа
+            print(batch.head())
 
-        # Приводим данные к списку кортежей
-        records = [tuple(row) for row in batch.itertuples(index=False, name=None)]
+            # Проверяем число столбцов в каждой строке
+            print("Число столбцов в строках:", batch.apply(lambda row: len(row), axis=1).unique())
+            stop = 0
 
-        # Вставляем данные в PostgreSQL
-        await conn.executemany(insert_query, records)
 
     # Закрываем соединение
     await conn.close()
