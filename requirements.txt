@@ -1,5 +1,3 @@
 pandas
 dask
 pyarrow
-psycopg2
-
