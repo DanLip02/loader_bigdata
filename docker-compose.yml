@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  default-table:
+    build: .
+    container_name: loader_bigdata
+    restart: on-failure
+    volumes:
+      - ./backend:/backend
+    ports:
+      - "${EXT_PORT}:${INT_PORT}"
+    command: ["python", "/backend/async_public.py"]
+

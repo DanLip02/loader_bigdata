@@ -56,31 +56,31 @@ async def load_csv_to_postgres():
     for batch_df in ddf.to_delayed():
         counter += 1
         print(f"🚀 Загружаем batch #{counter}...")
-        #
-        # # Вычисляем данные в фоне
-        # batch = await asyncio.to_thread(lambda: batch_df.compute())
-        #
-        # print("stop_2")
-        # # Заменяем NaN/NaT на None
-        # batch = batch.where(pd.notna(batch), 'null')
-        #
-        # # Приводим данные к списку кортежей
-        # records = [tuple(row) for row in batch.itertuples(index=False, name=None)]
-        #
-        # # Вставляем данные в PostgreSQL
-        # await conn.executemany(insert_query, records)
-        if counter == 46:  # Пропускаем первые 45 батчей
-            print(f"📌 Проверяем batch #{counter}")
 
-            # Вычисляем данные
-            batch = batch_df.compute()
+        # Вычисляем данные в фоне
+        batch = await asyncio.to_thread(lambda: batch_df.compute())
 
-            # Выводим 5 первых строк для анализа
-            print(batch.head())
+        print("stop_2")
+        # Заменяем NaN/NaT на None
+        batch = batch.where(pd.notna(batch), 'null')
 
-            # Проверяем число столбцов в каждой строке
-            print("Число столбцов в строках:", batch.apply(lambda row: len(row), axis=1).unique())
-            stop = 0
+        # Приводим данные к списку кортежей
+        records = [tuple(row) for row in batch.itertuples(index=False, name=None)]
+
+        # Вставляем данные в PostgreSQL
+        await conn.executemany(insert_query, records)
+        # if counter == 46:  # Пропускаем первые 45 батчей
+        #     print(f"📌 Проверяем batch #{counter}")
+        #
+        #     # Вычисляем данные
+        #     batch = batch_df.compute()
+        #
+        #     # Выводим 5 первых строк для анализа
+        #     print(batch.head())
+        #
+        #     # Проверяем число столбцов в каждой строке
+        #     print("Число столбцов в строках:", batch.apply(lambda row: len(row), axis=1).unique())
+        #     stop = 0
 
 
     # Закрываем соединение
