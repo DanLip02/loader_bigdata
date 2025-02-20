@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import data_base
 import numpy as np
 
-load_dotenv()
+load_dotenv(dotenv_path='/Users/danilalipatov/PycharmProjects/pythonProject1/load_to_db_big_data/.env')
 user = os.getenv("user")
 password = os.getenv("password")
 port = os.getenv("port")
@@ -17,14 +17,19 @@ table = os.getenv("table")
 schema = os.getenv("schema")
 
 DATABASE_URL = f"postgresql://{user}:{password}@{host}:{port}/{db}"
-CSV_FILE_PATH = r"C:\Users\danila.lipatov\PycharmProjects\1.csv"  # Убрал пробел
+CSV_FILE_PATH = r"/Users/danilalipatov/data_public /1.csv"
 
 # Имя таблицы в PostgreSQL
 TABLE_NAME = table
 SCHEMA = schema
 
 # Явное указание типов
-DTYPE_MAP, dask_column_order = data_base.table_info(user, password, host, port, db, table)
+DTYPE_MAP, ORDER_ = data_base.table_info(user, password, host, port, db, table)
+
+def get_stat_year(df):
+    # df = df.reset_index(drop=True)
+    df["year"] = df["creation_date"].str[:4].astype("int64") + df["age"].fillna(0).astype(float).astype("int64")
+    return df
 
 async def load_csv_to_postgres():
     print("🔄 Подключаемся к базе данных...")
@@ -45,10 +50,12 @@ async def load_csv_to_postgres():
             ddf[col] = None
 
     ddf = ddf.astype(DTYPE_MAP)
-    ddf = ddf[dask_column_order]
+    ddf = ddf[ORDER_]
+    ddf = ddf.map_partitions(get_stat_year, meta=ddf)
+
     print(len(ddf.columns))
-    columns = ", ".join(dask_column_order)
-    placeholders = ", ".join([f"${i+1}" for i in range(len(dask_column_order))])
+    columns = ", ".join(ORDER_)
+    placeholders = ", ".join([f"${i+1}" for i in range(len(ORDER_))])
     insert_query = f"INSERT INTO {SCHEMA}.{TABLE_NAME} ({columns}) VALUES ({placeholders})"
 
     # Загружаем данные в PostgreSQL
