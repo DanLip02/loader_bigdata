@@ -1,3 +1,7 @@
 pandas
 dask
+asyncpg
+psycopg2
+sqlalchemy
+python-dotenv
 pyarrow
